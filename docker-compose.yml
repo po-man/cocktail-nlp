@@ -1,0 +1,10 @@
+version: "2.3"
+
+services:
+  dev:
+    build: .
+    image: cocktail_dev
+    volumes:
+      - ./scripts:/scripts
+      - ./__data__:/__data__
+    command: sleep infinity
