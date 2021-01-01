@@ -2,6 +2,7 @@ import fire
 import glob
 import logging
 import os
+import re
 from typing import List
 
 from bs4 import BeautifulSoup
@@ -21,7 +22,7 @@ def html_to_corpus(
     sentences = [
         [
             vocab.lower()
-            for vocab in text.split()
+            for vocab in re.sub('[^\w-]', ' ', text).split()
             if len(vocab) >= min_vocab_length
         ]
         for p in soup.find_all('p')

@@ -2,6 +2,7 @@ import fire
 import json
 import logging
 import os
+import re
 from typing import List
 
 from bs4 import BeautifulSoup
@@ -26,10 +27,16 @@ def validate_recipe(recipe) -> bool:
     return len(recipe['ingredients']) > 1
 
 
+def rename(name):
+    name = re.sub('[^\w\s]', '', name.lower())
+    name = name.replace(' ', '_')
+    return name
+
+
 def parse_ingredient(ingredient_str):
     ingredient = ingredient_parser.parse(ingredient_str)
     if ingredient['ingredient']:
-        ingredient['ingredient'] = ingredient['ingredient'].replace(' ', '_')
+        ingredient['ingredient'] = rename(ingredient['ingredient'])
     return ingredient
 
 
@@ -49,7 +56,7 @@ def parse_recipe(
     ]
     description = recipe_paragraphs[1].get_text()
     return {
-        'name': name.replace(' ', '_'),
+        'name': rename(name),
         'img_file': img_file,
         'ingredients': [
             ingredient
