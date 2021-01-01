@@ -18,8 +18,9 @@ python prepare_phrase_list.py \
 
 # Data preparation (corpus)
 
+rm -f '/__data__/corpus.txt'
 python prepare_corpus.py \
-    --input_ebook_paths='/__data__/ebooks/*.epub' \
+    --input_ebook_paths='/__data__/ebooks/**/*.epub' \
     --output_corpus_path='/__data__/corpus.txt'
 
 python prepare_corpus_with_phrases.py \
