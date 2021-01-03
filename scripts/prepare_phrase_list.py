@@ -4,6 +4,8 @@ import logging
 import os
 from typing import List
 
+from utils.recipe_handling import parse_raw_recipes
+
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
@@ -26,9 +28,9 @@ def prepare_phrase_list(
     input_recipes_json_path: str,
     output_phrases_path: str,
 ):
-    recipes = []
-    with open(input_recipes_json_path, 'r') as json_file:
-        recipes = json.load(json_file)
+    # load recipes
+    recipes_json = json.load(open(input_recipes_json_path, 'r'))
+    recipes = parse_raw_recipes(recipes_json)
 
     phrases = extract_phrases(recipes)
     with open(output_phrases_path, 'w') as output_file:

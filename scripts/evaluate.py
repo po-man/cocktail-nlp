@@ -2,60 +2,22 @@ import fire
 import json
 import logging
 import os
-from pprint import pprint
 
 import gensim.models
 import numpy as np
 
 from utils.recipe_handling import (
+    parse_raw_recipes,
     filter_recipes,
-    encode_ingredients,
+    predict_recipes,
 )
 
 from utils.regression import (
     load_regression,
-    eval_regression,
 )
 
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
-
-
-def predict_recipe(
-    embedding_model,
-    regression_model,
-    ingredients,
-    top_k = 3,
-):
-    ingredients = encode_ingredients(embedding_model, ingredients)
-    ingredients_vectors = np.array([
-        eval_regression(
-            regression_model,
-            ingredient['vector'],
-        ) * ingredient['weight']
-        for ingredient in ingredients
-    ])
-    prediction_vector = np.sum(ingredients_vectors, axis=0)
-    prediction = embedding_model.wv.most_similar([prediction_vector], topn=top_k)
-    return prediction
-
-
-def predict_recipes(
-    embedding_model,
-    regression_model,
-    recipes,
-):
-    predictions = [
-        predict_recipe(
-            embedding_model,
-            regression_model,
-            recipe['ingredients']
-        )
-        for recipe in recipes
-    ]
-    return predictions
-
-
 
 def evaluate(
     input_recipes_path: str,
@@ -67,24 +29,30 @@ def evaluate(
     regression_model = load_regression(input_regression_model_path)
 
     # load recipes
-    recipes = json.load(open(input_recipes_path, 'r'))
-    logging.info(f'original #recipes: {len(recipes)}')
+    recipes_json = json.load(open(input_recipes_path, 'r'))
+    logging.info(f'original #recipes: {len(recipes_json)}')
 
     # pre-process recipes
+    recipes = parse_raw_recipes(recipes_json)
     recipes = filter_recipes(embedding_model, recipes)
     logging.info(f'filtered #recipes: {len(recipes)}')
 
-    #recipe = recipes[0]
+    # predict recipe names
     predictions = predict_recipes(embedding_model, regression_model, recipes)
 
-    comparisons = [
-        {
-            'prediction': prediction,
-            'ground_truth': recipe['name']
-        }
-        for recipe, prediction in zip(recipes, predictions)
-    ]
-    pprint(comparisons)
+    # summarise
+    num_recipes = len(predictions)
+    top_1 = 0
+    top_3 = 0
+    for recipe, prediction in zip(recipes, predictions):
+        if recipe['name'] == prediction[0][0]:
+            top_1 += 1
+        if recipe['name'] in [ name for name, score in prediction ]:
+            top_3 += 1
+    top_1_accuracy = top_1 / num_recipes
+    top_3_accuracy = top_3 / num_recipes
+    logging.info(f'Top-1 Accuracy: {top_1_accuracy} ({top_1}/{num_recipes})')
+    logging.info(f'Top-3 Accuracy: {top_3_accuracy} ({top_3}/{num_recipes})')
 
 
 if __name__ == '__main__':

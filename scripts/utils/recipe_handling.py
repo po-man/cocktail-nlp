@@ -1,19 +1,61 @@
 import json
+import re
 
 import numpy as np
+from ingreedypy import Ingreedy
+
+from .regression import eval_regression
+
+
+def parse_raw_recipe(raw_recipe):
+    def normalise_name(name):
+        name = re.sub('[^\w\s]', '', name.lower())
+        name = name.replace(' ', '_')
+        return name
+
+    recipe = {}
+    if 'name' in raw_recipe.keys():
+        recipe['name'] = normalise_name(raw_recipe['name'])
+
+    ingredient_parser = Ingreedy()
+    ingredients = []
+    for ingredient_str in raw_recipe['ingredients']:
+        ingredient = ingredient_parser.parse(ingredient_str)
+        if ingredient['ingredient']:
+            ingredient['ingredient'] = normalise_name(ingredient['ingredient'])
+            if all([
+                quantity['amount'] is not None
+                for quantity in ingredient['quantity']
+            ]):
+                ingredients.append(ingredient)
+    recipe['ingredients'] = ingredients
+    return recipe
+
+
+def parse_raw_recipes(raw_recipes):
+    recipes = [
+        parse_raw_recipe(raw_recipe)
+        for raw_recipe in raw_recipes
+    ]
+    return [
+        recipe
+        for recipe in recipes
+        if len(recipe['ingredients']) > 1
+    ]
+
+
+def validate_recipe(embedding_model, recipe) -> bool:
+    if 'name' in recipe.keys():
+        if name not in embedding_model.wv.vocab:
+            return False
+    for ingredient in recipe['ingredients']:
+        ingredient_name = ingredient['ingredient']
+        if ingredient_name not in embedding_model.wv.vocab:
+            return False
+    return True
 
 
 def filter_recipes(embedding_model, recipes):
-    def validate_recipe(embedding_model, recipe) -> bool:
-        name = recipe['name'].lower()
-        if name not in embedding_model.wv.vocab:
-            return False
-        for ingredient in recipe['ingredients']:
-            ingredient_name = ingredient['ingredient'].lower()
-            if ingredient_name not in embedding_model.wv.vocab:
-                return False
-        return True
-
     return [
         recipe
         for recipe in recipes
@@ -110,3 +152,38 @@ def prepare_matrices(recipes):
             target_matrix[idx,:] = recipe['vector'] * ingredient['weight']
             idx = idx + 1
     return (source_matrix, target_matrix)
+
+
+def predict_recipe(
+    embedding_model,
+    regression_model,
+    ingredients,
+    top_k = 3,
+):
+    ingredients = encode_ingredients(embedding_model, ingredients)
+    ingredients_vectors = np.array([
+        eval_regression(
+            regression_model,
+            ingredient['vector'],
+        ) * ingredient['weight']
+        for ingredient in ingredients
+    ])
+    prediction_vector = np.sum(ingredients_vectors, axis=0)
+    prediction = embedding_model.wv.most_similar([prediction_vector], topn=top_k)
+    return prediction
+
+
+def predict_recipes(
+    embedding_model,
+    regression_model,
+    recipes,
+):
+    predictions = [
+        predict_recipe(
+            embedding_model,
+            regression_model,
+            recipe['ingredients']
+        )
+        for recipe in recipes
+    ]
+    return predictions

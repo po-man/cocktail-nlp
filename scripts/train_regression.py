@@ -6,6 +6,7 @@ import os
 import gensim.models
 
 from utils.recipe_handling import (
+    parse_raw_recipes,
     filter_recipes,
     encode_recipes,
     prepare_matrices,
@@ -28,10 +29,11 @@ def train_regression(
     embedding_model = gensim.models.Word2Vec.load(input_embedding_model_path)
 
     # load recipes
-    recipes = json.load(open(input_recipes_path, 'r'))
-    logging.info(f'original #recipes: {len(recipes)}')
+    recipes_json = json.load(open(input_recipes_path, 'r'))
+    logging.info(f'original #recipes: {len(recipes_json)}')
 
     # pre-process recipes
+    recipes = parse_raw_recipes(recipes_json)
     recipes = filter_recipes(embedding_model, recipes)
     logging.info(f'filtered #recipes: {len(recipes)}')
     recipes = encode_recipes(embedding_model, recipes)

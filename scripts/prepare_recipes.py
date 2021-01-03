@@ -6,64 +6,22 @@ import re
 from typing import List
 
 from bs4 import BeautifulSoup
-from ingreedypy import Ingreedy
 
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
-
-ingredient_parser = Ingreedy()
-
-
-def validate_ingredient(ingredient) -> bool:
-    if ingredient['ingredient'] is None:
-        return False
-    for quantity in ingredient['quantity']:
-        if quantity['amount'] is None:
-            return False
-    return True
-
-
-def validate_recipe(recipe) -> bool:
-    return len(recipe['ingredients']) > 1
-
-
-def rename(name):
-    name = re.sub('[^\w\s]', '', name.lower())
-    name = name.replace(' ', '_')
-    return name
-
-
-def parse_ingredient(ingredient_str):
-    ingredient = ingredient_parser.parse(ingredient_str)
-    if ingredient['ingredient']:
-        ingredient['ingredient'] = rename(ingredient['ingredient'])
-    return ingredient
 
 
 def parse_recipe(
     recipe_div,
 ):
     name = recipe_div.h3.get_text()
-    img_src = recipe_div.img['src']
-    img_file = img_src.split('/')[-1]
     recipe_paragraphs = recipe_div \
         .find('div', class_='content-appear') \
         .find_all('p')
-    ingredient_strs = recipe_paragraphs[0].get_text('\n').split('\n')
-    ingredients = [
-        parse_ingredient(ingredient_str)
-        for ingredient_str in ingredient_strs
-    ]
-    description = recipe_paragraphs[1].get_text()
+    ingredients = re.split(' \/ |\n|,', recipe_paragraphs[0].get_text('\n'))
     return {
-        'name': rename(name),
-        'img_file': img_file,
-        'ingredients': [
-            ingredient
-            for ingredient in ingredients
-            if validate_ingredient(ingredient)
-        ],
-        'description': description,
+        'name': name,
+        'ingredients': ingredients
     }
 
 
@@ -80,11 +38,6 @@ def prepare_recipes(
     recipes_json = [
         parse_recipe(recipe_div)
         for recipe_div in recipe_divs
-    ]
-    recipes_json = [
-        recipe
-        for recipe in recipes_json
-        if validate_recipe(recipe)
     ]
 
     with open(output_recipes_json_path, 'w') as json_file:
