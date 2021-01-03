@@ -49,3 +49,13 @@ python evaluate.py \
     --input_recipes_path='/__data__/recipes.json' \
     --input_embedding_model_path='/__data__/embedding_model.bin' \
     --input_regression_model_path='/__data__/regression_model.bin'
+
+python predict_recipe_name.py \
+    --ingredients='[
+        "50 ml White Rum",
+        "2 Mint leaves",
+        "10 ml Sugar Syrup",
+        "25 ml Lime Juice",
+    ]' \
+    --embedding_model_path='/__data__/embedding_model.bin' \
+    --regression_model_path='/__data__/regression_model.bin'
