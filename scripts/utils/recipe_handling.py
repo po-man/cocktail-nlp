@@ -46,7 +46,7 @@ def parse_raw_recipes(raw_recipes):
 
 def validate_recipe(embedding_model, recipe) -> bool:
     if 'name' in recipe.keys():
-        if name not in embedding_model.wv.vocab:
+        if recipe['name'] not in embedding_model.wv.vocab:
             return False
     for ingredient in recipe['ingredients']:
         ingredient_name = ingredient['ingredient']
